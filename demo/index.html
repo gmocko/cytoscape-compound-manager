@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cytoscape Compound Manager - Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    header {
+      background: #16213e;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid #0f3460;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: #e94560;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    button {
+      background: #0f3460;
+      color: #eee;
+      border: 1px solid #e94560;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #e94560;
+      color: #fff;
+    }
+    
+    button:active {
+      transform: scale(0.98);
+    }
+    
+    main {
+      flex: 1;
+      display: flex;
+    }
+    
+    #cy {
+      flex: 1;
+      background: #0f0f23;
+    }
+    
+    aside {
+      width: 280px;
+      background: #16213e;
+      padding: 1rem;
+      border-left: 1px solid #0f3460;
+      overflow-y: auto;
+    }
+    
+    aside h2 {
+      font-size: 0.875rem;
+      color: #e94560;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .info-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .info-group h3 {
+      font-size: 0.75rem;
+      color: #888;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+    }
+    
+    .info-value {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.875rem;
+      color: #4ecca3;
+    }
+    
+    .node-list {
+      list-style: none;
+    }
+    
+    .node-list li {
+      padding: 0.25rem 0;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .node-list .badge {
+      background: #e94560;
+      color: #fff;
+      font-size: 0.625rem;
+      padding: 0.125rem 0.375rem;
+      border-radius: 2px;
+    }
+    
+    .instructions {
+      background: #0f3460;
+      padding: 1rem;
+      border-radius: 4px;
+      margin-top: 1rem;
+    }
+    
+    .instructions h3 {
+      color: #e94560;
+      margin-bottom: 0.5rem;
+    }
+    
+    .instructions ul {
+      font-size: 0.8125rem;
+      color: #aaa;
+      padding-left: 1rem;
+    }
+    
+    .instructions li {
+      margin: 0.25rem 0;
+    }
+    
+    /* Cytoscape styles are defined in JS */
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🔷 Cytoscape Compound Manager</h1>
+    <div class="controls">
+      <button id="btn-collapse-all">Collapse All</button>
+      <button id="btn-expand-all">Expand All</button>
+      <button id="btn-reset">Reset Layout</button>
+    </div>
+  </header>
+  
+  <main>
+    <div id="cy"></div>
+    <aside>
+      <h2>State</h2>
+      
+      <div class="info-group">
+        <h3>Collapsed Nodes</h3>
+        <ul class="node-list" id="collapsed-list">
+          <li><em style="color:#666">None</em></li>
+        </ul>
+      </div>
+      
+      <div class="info-group">
+        <h3>Projections</h3>
+        <div class="info-value" id="projection-count">0</div>
+      </div>
+      
+      <div class="info-group">
+        <h3>Selected</h3>
+        <div class="info-value" id="selected-info">-</div>
+      </div>
+      
+      <div class="instructions">
+        <h3>Instructions</h3>
+        <ul>
+          <li><strong>Double-click</strong> on compound node to collapse/expand</li>
+          <li><strong>Drag</strong> nodes to reposition</li>
+          <li>Use buttons above to collapse/expand all</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+
+  <script src="https://unpkg.com/cytoscape@3.30.0/dist/cytoscape.min.js"></script>
+  <script src="https://unpkg.com/cytoscape-cola@2.5.1/cytoscape-cola.js"></script>
+  <script type="module">
+    import register from '../src/index.js';
+    
+    // Register Cola layout
+    if (typeof cytoscapeCola !== 'undefined') {
+      cytoscape.use(cytoscapeCola);
+      console.log('✅ Cola layout registered');
+    }
+    
+    // Register extension
+    register(cytoscape);
+    
+    // C4 Model Data (3 levels of nesting)
+    const c4Elements = {
+      nodes: [
+        // Level 1: System Context
+        { data: { id: 'system', label: 'E-Commerce System', level: 1, type: 'system' } },
+        
+        // Level 2: Containers
+        { data: { id: 'web-app', label: 'Web Application', parent: 'system', level: 2, type: 'container' } },
+        { data: { id: 'api', label: 'API Gateway', parent: 'system', level: 2, type: 'container' } },
+        { data: { id: 'database', label: 'Database', parent: 'system', level: 2, type: 'container' } },
+        
+        // Level 3: Components in Web App
+        { data: { id: 'auth-ui', label: 'Auth UI', parent: 'web-app', level: 3, type: 'component' } },
+        { data: { id: 'catalog-ui', label: 'Catalog UI', parent: 'web-app', level: 3, type: 'component' } },
+        { data: { id: 'cart-ui', label: 'Cart UI', parent: 'web-app', level: 3, type: 'component' } },
+        
+        // Level 3: Components in API
+        { data: { id: 'auth-svc', label: 'Auth Service', parent: 'api', level: 3, type: 'component' } },
+        { data: { id: 'catalog-svc', label: 'Catalog Service', parent: 'api', level: 3, type: 'component' } },
+        { data: { id: 'order-svc', label: 'Order Service', parent: 'api', level: 3, type: 'component' } },
+        
+        // Level 3: Components in Database
+        { data: { id: 'users-db', label: 'Users Table', parent: 'database', level: 3, type: 'component' } },
+        { data: { id: 'products-db', label: 'Products Table', parent: 'database', level: 3, type: 'component' } },
+        { data: { id: 'orders-db', label: 'Orders Table', parent: 'database', level: 3, type: 'component' } },
+        
+        // External systems
+        { data: { id: 'user', label: '👤 User', level: 0, type: 'external' } },
+        { data: { id: 'payment', label: '💳 Payment Gateway', level: 0, type: 'external' } },
+      ],
+      edges: [
+        // User interactions
+        { data: { source: 'user', target: 'auth-ui', label: 'logs in' } },
+        { data: { source: 'user', target: 'catalog-ui', label: 'browses' } },
+        { data: { source: 'user', target: 'cart-ui', label: 'orders' } },
+        
+        // UI to Services
+        { data: { source: 'auth-ui', target: 'auth-svc', label: 'authenticates' } },
+        { data: { source: 'catalog-ui', target: 'catalog-svc', label: 'fetches' } },
+        { data: { source: 'cart-ui', target: 'order-svc', label: 'creates order' } },
+        
+        // Services to DB
+        { data: { source: 'auth-svc', target: 'users-db', label: 'reads/writes' } },
+        { data: { source: 'catalog-svc', target: 'products-db', label: 'reads' } },
+        { data: { source: 'order-svc', target: 'orders-db', label: 'writes' } },
+        { data: { source: 'order-svc', target: 'products-db', label: 'updates stock' } },
+        
+        // External integration
+        { data: { source: 'order-svc', target: 'payment', label: 'processes payment' } },
+      ]
+    };
+    
+    // Initialize Cytoscape
+    const cy = cytoscape({
+      container: document.getElementById('cy'),
+      elements: c4Elements,
+      style: [
+        // Base node style
+        {
+          selector: 'node',
+          style: {
+            'label': 'data(label)',
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'font-size': '11px',
+            'font-family': 'Segoe UI, sans-serif',
+            'color': '#fff',
+            'text-wrap': 'wrap',
+            'text-max-width': '80px',
+          }
+        },
+        // External nodes
+        {
+          selector: 'node[type="external"]',
+          style: {
+            'background-color': '#4a4a6a',
+            'shape': 'round-rectangle',
+            'width': '100px',
+            'height': '50px',
+          }
+        },
+        // System (Level 1)
+        {
+          selector: 'node[type="system"]',
+          style: {
+            'background-color': '#1a365d',
+            'border-width': 2,
+            'border-color': '#3182ce',
+            'padding': '30px',
+          }
+        },
+        // Container (Level 2)
+        {
+          selector: 'node[type="container"]',
+          style: {
+            'background-color': '#234e70',
+            'border-width': 2,
+            'border-color': '#4299e1',
+            'padding': '20px',
+          }
+        },
+        // Component (Level 3)
+        {
+          selector: 'node[type="component"]',
+          style: {
+            'background-color': '#2d5a87',
+            'border-width': 1,
+            'border-color': '#63b3ed',
+            'width': '90px',
+            'height': '40px',
+            'shape': 'round-rectangle',
+          }
+        },
+        // Collapsed state (per spec 10.1 - double border)
+        {
+          selector: '.cy-compound-collapsed',
+          style: {
+            'border-width': 4,
+            'border-style': 'double',
+            'border-color': '#e94560',
+          }
+        },
+        // Edges
+        {
+          selector: 'edge',
+          style: {
+            'width': 1.5,
+            'line-color': '#4a5568',
+            'target-arrow-color': '#4a5568',
+            'target-arrow-shape': 'triangle',
+            'curve-style': 'bezier',
+            'font-size': '9px',
+            'color': '#718096',
+            'text-rotation': 'autorotate',
+            'text-margin-y': -10,
+          }
+        },
+        // Show edge labels only when edge has label
+        {
+          selector: 'edge[label]',
+          style: {
+            'label': 'data(label)',
+          }
+        },
+        // Projection edges
+        {
+          selector: '.cy-compound-projection',
+          style: {
+            'line-style': 'dashed',
+            'line-color': '#e94560',
+            'target-arrow-color': '#e94560',
+            'width': 2,
+          }
+        },
+        // Selected
+        {
+          selector: ':selected',
+          style: {
+            'border-color': '#f6ad55',
+            'border-width': 3,
+          }
+        },
+      ],
+      layout: {
+        name: 'cose',
+        animate: false,
+        nodeRepulsion: 8000,
+        idealEdgeLength: 100,
+        padding: 50,
+      }
+    });
+    
+    // Initialize compound manager with auto-layout enabled
+    const api = cy.compoundManager({ 
+      animate: true,
+      animationDuration: 300,
+      autoLayout: true,  // Enable auto layout after collapse/expand
+      layoutDebounce: 150
+    });
+    
+    // UI State Update
+    function updateUI() {
+      // Collapsed nodes list
+      const collapsedList = document.getElementById('collapsed-list');
+      const collapsed = api.collapsedNodes();
+      
+      if (collapsed.length === 0) {
+        collapsedList.innerHTML = '<li><em style="color:#666">None</em></li>';
+      } else {
+        collapsedList.innerHTML = collapsed.map(n => `
+          <li>
+            <span>${n.data('label')}</span>
+            <span class="badge">L${n.data('level')}</span>
+          </li>
+        `).join('');
+      }
+      
+      // Projection count
+      let projCount = 0;
+      collapsed.forEach(n => {
+        projCount += api.getProjectedEdges(n).length;
+      });
+      document.getElementById('projection-count').textContent = projCount;
+    }
+    
+    // Double-click to toggle collapse/expand
+    cy.on('dblclick', 'node', function(evt) {
+      const node = evt.target;
+      
+      if (!node.isParent()) return;
+      
+      if (api.isCollapsed(node)) {
+        api.expand(node);
+      } else {
+        api.collapse(node);
+      }
+      
+      updateUI();
+    });
+    
+    // Selection info
+    cy.on('select', 'node', function(evt) {
+      const node = evt.target;
+      const info = `${node.data('label')} (${node.data('type')})`;
+      document.getElementById('selected-info').textContent = info;
+    });
+    
+    cy.on('unselect', 'node', function() {
+      document.getElementById('selected-info').textContent = '-';
+    });
+    
+    // Button handlers
+    document.getElementById('btn-collapse-all').addEventListener('click', () => {
+      api.collapseAll();
+      updateUI();
+    });
+    
+    document.getElementById('btn-expand-all').addEventListener('click', () => {
+      api.expandAll();
+      updateUI();
+    });
+    
+    document.getElementById('btn-reset').addEventListener('click', async () => {
+      api.expandAll();
+      // Use Cola layout if available
+      const layoutName = typeof cytoscapeCola !== 'undefined' ? 'cola' : 'cose';
+      cy.layout({ 
+        name: layoutName, 
+        animate: true, 
+        animationDuration: 500,
+        nodeSpacing: 30,
+        padding: 50
+      }).run();
+      updateUI();
+    });
+    
+    // Events from compound manager
+    cy.on('compoundmanager.collapse compoundmanager.expand', updateUI);
+    
+    // Handle layout reset required (per spec 7.3)
+    cy.on('compoundmanager.layoutResetRequired', (event) => {
+      console.warn('⚠️ Layout reset required:', event.message);
+      // Show notification to user
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed; top: 60px; right: 20px; 
+        background: #e94560; color: white; padding: 1rem;
+        border-radius: 4px; z-index: 1000; max-width: 300px;
+      `;
+      notification.innerHTML = `
+        <strong>⚠️ Layout Issue</strong><br>
+        ${event.message}<br>
+        <button onclick="this.parentElement.remove()" style="margin-top: 0.5rem; background: white; color: #e94560; border: none; padding: 0.25rem 0.5rem; cursor: pointer;">Dismiss</button>
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
+    });
+    
+    // Initial UI
+    updateUI();
+    
+    console.log('✅ Cytoscape Compound Manager Demo loaded');
+    console.log('📊 C4 Model: 3 levels, 15 nodes, 11 edges');
+    console.log('🔧 Auto-layout:', api.isAutoLayoutEnabled() ? 'enabled' : 'disabled');
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,37 @@
+{
+  "name": "cytoscape-compound-manager",
+  "version": "0.1.0",
+  "description": "Expand/collapse compound nodes with edge projection for Cytoscape.js",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "npm test -- --watch",
+    "demo": "npx http-server demo -p 8080 -o"
+  },
+  "keywords": [
+    "cytoscape",
+    "cytoscape-extension",
+    "compound-nodes",
+    "expand-collapse",
+    "graph"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cytoscape": "^3.30.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "peerDependencies": {
+    "cytoscape": "^3.0.0",
+    "cytoscape-cola": "^2.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "moduleFileExtensions": ["js", "mjs"],
+    "testMatch": ["**/__tests__/**/*.test.js"]
+  }
+}
