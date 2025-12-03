@@ -585,8 +585,9 @@ function runLocalLayout(cy, node, opts = {}) {
     originalPositions.set(n.id(), { ...n.position() });
   });
   
-  // Use cola if available, otherwise fall back to cose
-  const layoutName = opts.layoutName || (isColaAvailable(cy) ? 'cola' : 'cose');
+  // Use cose for local layout (more stable with compound nodes)
+  // Cola has issues with partial layouts on compound graphs
+  const layoutName = opts.layoutName || 'cose';
   
   const layoutOptions = {
     name: layoutName,
@@ -595,6 +596,7 @@ function runLocalLayout(cy, node, opts = {}) {
     fit: false, // Don't fit for local layout
     eles: affectedNodes.union(affectedNodes.edgesWith(affectedNodes)),
     nodeSpacing: opts.nodeSpacing || 15,
+    nodeRepulsion: 4000,
     ...opts.colaOptions
   };
   

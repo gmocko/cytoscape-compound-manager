@@ -378,12 +378,11 @@
       }
     });
     
-    // Initialize compound manager with auto-layout enabled
+    // Initialize compound manager (auto-layout disabled for stability)
     const api = cy.compoundManager({ 
       animate: true,
       animationDuration: 300,
-      autoLayout: true,  // Enable auto layout after collapse/expand
-      layoutDebounce: 150
+      autoLayout: false  // Manual layout via Reset button (Cola has issues with partial layouts)
     });
     
     // UI State Update
